@@ -1,4 +1,4 @@
-# Instruction Gap Detection – DSC 670 Milestone 2
+# Instruction Gap Detection with Generative AI
 
 This project evaluates how GPT 4o mini identifies gaps, ambiguity, and missing steps in procedural instructions. The notebook contains five structured experiments that test direct gap detection, domain ambiguity, step-by-step audits, and comparative analysis.
 
