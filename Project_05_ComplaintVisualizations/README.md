@@ -1,21 +1,22 @@
-# Visualizing Aggregated Data
+# Visualizing Aggregated Data – Python Implementation
 
-This project builds a Power BI dashboard using aggregated operational data. The work focuses on clear visual communication and executive-level presentation. The dashboard includes multiple visuals and structured narrative flow.
+This project demonstrates aggregated data analysis and visualization using Python. The work focuses on grouping, summarizing, and plotting structured datasets. The notebook includes data preparation, aggregation logic, and technician-level visualization.
 
 ## Tools Used
-Power BI
-Excel
-Power Query
+Python
+Pandas
+Matplotlib
+Seaborn
 
-## Dashboard Contents
-- Aggregated metrics and summary visuals
-- Multi-visual layout
-- Narrative structure for executive review
-- Highlighting of trends and operational drivers
+## Notebook Contents
+- Data cleaning and transformation
+- Grouping and aggregation of key variables
+- Summary tables for operational review
+- Visualizations of aggregated metrics
+- Interpretation of patterns in the data
 
 ## Key Results
-The dashboard provided clear visibility into aggregated data patterns. Visuals supported decision-making by presenting trends in a technician-friendly format.
+The aggregated views produced clear patterns in the dataset. Visualizations supported technician-level analysis by highlighting trends, distributions, and grouped relationships.
 
 ## Why This Project Matters
-This project demonstrates data storytelling and technician-level visualization skills. It supports operational review and communication of key metrics.
-
+This project demonstrates structured aggregation and Python-based visualization. It supports operational review and technician-level data exploration without relying on external dashboard tools.
