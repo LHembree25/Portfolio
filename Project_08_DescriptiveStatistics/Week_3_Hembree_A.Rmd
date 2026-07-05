@@ -1,0 +1,912 @@
+---
+title: "Descriptive Statistics"
+author: "Lex Hembree"
+date: "2025-09-27"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  word_document: default
+---
+
+## Descriptive Statistics on *sales_data_sample* for each numeric attribute in the dataset
+```{r}
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(scales)
+library(moments)
+```
+
+##### Since this is a large markdown, I figured I should place some final thoughts at the beginning. While each data point can provide various information for analysis, we should strive or at least attempt multiple views/data points to gain a whole concept view of the data because there may be items that skew what we get as a result. Multiple quantity sizes and unit prices can casue large variances within the data. 
+##### As analysts we can further breakdown data sets into specialized views (by product or region, possibly both) and begin to tell a story with increased fidelity.
+
+### Distribution
+##### Types of Distributions: Going to try multiple (3) distribution visuals to see which is best
+##### Bell Curve
+```{r}
+# Read in the data set being analyzed
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+
+# Create the data frame to build from; there are four product types we want to analyze and 
+# The amount of rows for the data size is 495 so we make that our outermost value
+sales_df <- data.frame(
+  product = rep(c("A", "B", "C", "D"), each = 495),
+  value = c(rnorm(495, 50, 10), rnorm(495, 60, 15),
+            rnorm(495, 55, 12), rnorm(495, 65, 8))
+)
+# Plot
+ggplot(sales_df, aes(x = value, color = product)) +
+  geom_density(size = 1.2) +
+  labs(title = "Bell Curve by Product",
+       x = "Value",
+       y = "Density") +
+  theme_minimal()
+
+# Here I'm looking to see which product had the highest total sales
+# Unfortunately, sales don't have a negative value to them unless you are discussing profit or loss, therefore for this particular exercise, a bell curve wouldn't be the best option to show 
+
+```
+
+###### Bar Chart
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+
+# Summarize total sales by product
+sales_by_product <- Sales %>%
+  group_by(Product) %>%
+  summarise(TotalSales = sum(TotalSales, na.rm = TRUE)) %>%
+  arrange(desc(TotalSales))
+
+# Plot
+ggplot(sales_by_product, aes(x = reorder(Product, -TotalSales), y = TotalSales)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_continuous(
+  labels = scales::label_dollar(),
+  expand = expansion(mult = c(0, 0.2))  # adds 20% vertical padding
+) +
+  labs(title = "Total Sales by Product",
+       x = "Product", y = "Total Sales (USD)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# The bar Chart gives a better idea visually of which product is conducting better sales over all in terms of revenue.
+```
+
+###### Histogram
+```{r}
+# Load data
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+
+# Plot histogram
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "white", alpha = 0.7) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +  # adds 20% padding above bars
+  scale_x_continuous(labels = scales::label_dollar()) +
+  labs(title = "Distribution of Total Sales",
+       x = "Total Sales (USD)", y = "Frequency") +
+  theme_minimal()
+
+# Histogram gives a good way to layer our central tendencies and see quick values/patterns. I'll utilize this going forward into that section.
+```
+
+### Central Tendency
+##### Mean f/Total Sales
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+mean_val
+
+# The mean value is $409.05; this means that the average sales price per item (4748 items sold), across all four products, is only approximately 8.6% of the total revenue.
+
+#Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mean_val, color = "darkblue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = Inf, label = paste("Mean:", scales::dollar(mean_val)),
+           vjust = 2, hjust = 0.5, color = "darkblue", fontface = "bold") +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Total Sales with Mean",
+       x = "Total Sales", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Median f/Total Sales
+```{r}
+median_val <- median(Sales$TotalSales, na.rm = TRUE)
+median_val
+
+# The median value is $271.15; this means that if they were to place every total sales price in one line (row or column wouldn't matter) the exact center total sale would be $271.15.
+
+#Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = median_val, y = Inf, label = paste("Median:", scales::dollar(median_val)),
+           vjust = 2, hjust = 0.5, color = "purple", fontface = "bold") +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Total Sales with Median",
+       x = "Total Sales", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Mode f/Total Sales
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mode_vals <- mode(Sales$TotalSales)
+mode_vals
+```
+
+##### Mode with Custom Function to gain Value f/Total Sales
+```{r}
+# Let's try again after searching why the value returned "numeric". Answer = base R does not return the statistical mode (mode()), instead, it returns the internal storage type of the object — in this case, "numeric".
+
+# Custom mode function due to R not including a built in function.
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$TotalSales)
+mode_vals
+
+# There are multiple modes identified in the data set; these would be good indicators of a possible expanded analysis to determine where these sales occurred, were they the same product type, same quantity of units sold and things of that nature. 
+
+# Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mode_vals, y = Inf, label = paste("Mode:", round(mode_vals, 2)),
+           vjust = 2, hjust = 0.5, color = "red", fontface = "bold") +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Total Sales with Mode",
+       x = "Total Sales", y = "Frequency") +
+  theme_minimal()
+
+# There are multiple modes which causes a display issue; going to try and either remove the values or have a annotation off to the side that lists all the modes
+```
+
+##### Mode but Visually Appealing f/Total Sales
+```{r}
+# This one shows the values off to the side in ascending order (left to right) as one would read the visual in the US (other countries might read right to left and if presenting to such, the analyst should address that in how the visual presents the data)
+# Custom mode function due to R not including a built in function.
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$TotalSales)
+mode_vals
+
+# Get histogram height for positioning
+hist_data <- hist(Sales$TotalSales, plot = FALSE)
+y_max <- max(hist_data$counts)
+
+# Add annotation block near the top-right & add the $ to show this is currency
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text",
+           x = max(Sales$TotalSales) * 0.6,  # move left to stay inside plot
+           y = y_max * 0.2,                  # place near top
+           label = paste("Mode(s):", "\n", paste(dollar(mode_vals), collapse = "\n")),
+           hjust = 0, color = "red", size = 4) +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Total Sales with Mode(s)",
+       x = "Total Sales", y = "Frequency") +
+  theme_minimal()
+
+#That looks visually more appealing, however now there are multiple visuals of data which can lead to fatigue. Let's see if we can combine them into one or two visuals instead.
+```
+
+##### Total Sales - Mean; Median; & Mode Combined
+```{r}
+# I wanted to show them all on one visual so I used the internet and it gave me this
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+median_val <- median(Sales$TotalSales, na.rm = TRUE)
+
+# Custom mode function
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$TotalSales)
+
+# Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "lightgray", color = "white", alpha = 0.6) +
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dotted", size = 1.2) +
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "solid", size = 1.2) +
+  annotate("text", x = mean_val, y = Inf, label = paste("Mean:", dollar(mean_val)),
+           vjust = 2, hjust = 0.5, color = "blue", fontface = "bold") +
+  annotate("text", x = median_val, y = Inf, label = paste("Median:", dollar(median_val)),
+           vjust = 4, hjust = 0.5, color = "purple", fontface = "bold") +
+  annotate("text", x = mode_vals[1], y = Inf, label = paste("Mode(s):", paste(dollar(mode_vals), collapse = ", ")),
+           vjust = 5, hjust = 0.2, color = "red") +
+  scale_x_continuous(labels = label_dollar()) +
+  labs(title = "Total Sales in USD: Mean, Median, and Multiple Modes",
+       x = "Total Sales (USD)", y = "Frequency") +
+  theme_minimal()
+# Values look crushed/compact and aren't visually appealing, going to try and make a legend here similar to the mode visual above
+```
+
+##### Total Sales - Mean; Median; & Mode Combined & Visually Appealing
+```{r}
+# Used a bit of copilot to assist with the measurements for the value/label section to the right.
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+median_val <- median(Sales$TotalSales, na.rm = TRUE)
+
+# Custom mode function
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$TotalSales)
+
+# Get histogram height for positioning
+hist_data <- hist(Sales$TotalSales, plot = FALSE)
+y_max <- max(hist_data$counts)
+x_annotate <- max(Sales$TotalSales) * 0.55
+
+# Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "white", alpha = 0.55) +
+  
+  # Mean line and label
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.33,
+         label = paste("Mean:", dollar(mean_val)),
+         hjust = 0, color = "blue", size = 4) +
+
+  # Median line and label
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.30,
+         label = paste("Median:", dollar(median_val)),
+         hjust = 0, color = "purple", size = 4) +
+
+  # Mode lines and wrapped label
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.2,
+         label = paste("Mode(s):", "\n", paste(dollar(mode_vals), collapse = "\n")),
+         hjust = 0, color = "red", size = 4) +
+
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Total Sales with Mean, Median, and Mode(s)",
+       x = "Total Sales (USD)", y = "Frequency") +
+  theme_minimal()
+# By condensing the data into one chart, analysts and others are able to quickly gather the information in the data.
+```
+
+#### For the next numeric areas (Unit Price & Quantity) I will utilize the formulas above and change the referenced column
+
+##### Mean f/Unit Price
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$UnitPrice, na.rm = TRUE)
+
+# The mean value is $409.05; this means that the average sales price per item (4748 items sold), across all four products, is only approximately 8.6% of the total revenue.
+
+# Plot
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_histogram(binwidth = 50, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mean_val, color = "darkblue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = Inf, label = paste("Mean:", scales::dollar(mean_val)),
+           vjust = 2, hjust = 0.5, color = "darkblue", fontface = "bold") +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Unit Price with Mean",
+       x = "Unit Price", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Median f/Unit Price
+```{r}
+median_val <- median(Sales$UnitPrice, na.rm = TRUE)
+
+# The median value is $271.15; this means that if they were to place every total sales price in one line (row or column wouldn't matter) the exact center total sale would be $271.15.
+
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_histogram(binwidth = 50, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = median_val, y = Inf, label = paste("Median:", scales::dollar(median_val)),
+           vjust = 2, hjust = 0.5, color = "purple", fontface = "bold") +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Unit Price with Median",
+       x = "Unit Price", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Mode but Visually Appealing f/Unit Price
+```{r}
+# This one shows the values off to the side in ascending order (left to right) as one would read the visual in the US (other countries might read right to left and if presenting to such, the analyst should address that in how the visual presents the data)
+# Custom mode function due to R not including a built in function.
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$UnitPrice)
+
+# Get histogram height for positioning
+hist_data <- hist(Sales$UnitPrice, plot = FALSE)
+y_max <- max(hist_data$counts)
+
+# Add annotation block near the top-right & add the $ to show this is currency
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text",
+           x = max(Sales$UnitPrice) * 0.9,  # move left to stay inside plot
+           y = y_max * 0.8,                  # place near top
+           label = paste("Mode(s):", "\n", paste(dollar(mode_vals), collapse = "\n")),
+           hjust = 0, color = "red", size = 4) +
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Unit Price with Mode(s)",
+       x = "Unit Price", y = "Frequency") +
+  theme_minimal()
+# That looks visually more appealing, however now there are multiple visuals of data which can lead to fatigue. Let's see if we can combine them into one or two visuals instead.
+```
+
+##### Unit Price - Mean; Median; & Mode Combined & Visually Appealing
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$UnitPrice, na.rm = TRUE)
+median_val <- median(Sales$UnitPrice, na.rm = TRUE)
+
+# Custom mode function
+get_modes <- function(v) {
+  freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$UnitPrice)
+
+# Get histogram height for positioning
+hist_data <- hist(Sales$UnitPrice, plot = FALSE)
+y_max <- max(hist_data$counts)
+x_annotate <- max(Sales$UnitPrice) * 0.95
+
+# Plot
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "white", alpha = 0.55) +
+  
+  # Mean line and label
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 1.35,
+         label = paste("Mean:", dollar(mean_val)),
+         hjust = 0, color = "blue", size = 4) +
+
+  # Median line and label
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 1.2,
+         label = paste("Median:", dollar(median_val)),
+         hjust = 0, color = "purple", size = 4) +
+
+  # Mode lines and wrapped label
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.65,
+         label = paste("Mode(s):", "\n", paste(dollar(mode_vals), collapse = "\n")),
+         hjust = 0, color = "red", size = 4) +
+
+  scale_x_continuous(labels = label_dollar(),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(title = "Histogram of Unit Price with Mean, Median, and Mode(s)",
+       x = "Unit Price (USD)", y = "Frequency") +
+  theme_minimal()
+# By condensing the data into one chart, analysts and others are able to quickly gather the information in the data.
+```
+
+##### Mean f/Quantity
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$Quantity, na.rm = TRUE)
+
+# The mean value is $409.05; this means that the average sales price per item (4748 items sold), across all four products, is only approximately 8.6% of the total revenue.
+
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mean_val, color = "darkblue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = Inf,
+           label = paste("Mean:", round(mean_val, 2)),
+           vjust = 2, hjust = 0.5, color = "darkblue", fontface = "bold") +
+  labs(title = "Histogram of Quantity with Mean",
+       x = "Quantity", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Median f/Quantity
+```{r}
+median_val <- median(Sales$Quantity, na.rm = TRUE)
+
+# The median value is $271.15; this means that if they were to place every total sales price in one line (row or column wouldn't matter) the exact center total sale would be $271.15.
+
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = median_val, y = Inf,
+           label = paste("Median:", round(median_val, 2)),
+           vjust = 2, hjust = 0.5, color = "purple", fontface = "bold") +
+  scale_x_continuous(
+    expand = expansion(mult = c(0.02, 0.08))
+  ) +
+  labs(title = "Histogram of Quantity with Median",
+       x = "Quantity", y = "Frequency") +
+  theme_minimal()
+```
+
+##### Mode but Visually Appealing f/Quantity
+```{r}
+# This one shows the values off to the side in ascending order (left to right) as one would read the visual in the US (other countries might read right to left and if presenting to such, the analyst should address that in how the visual presents the data)
+# Custom mode function due to R not including a built in function.
+get_modes <- function(v) {
+   freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$Quantity)
+
+# Plot
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+annotate("text",
+         x = mode_vals,
+         y = y_max * 0.9,
+         label = paste("Mode:", round(mode_vals, 2)),
+         hjust = 0.5,
+         vjust = -0.5,
+         color = "red",
+         fontface = "bold",
+         size = 4) +
+  labs(title = "Histogram of Quantity with Mode",
+       x = "Quantity", y = "Frequency") +
+  theme_minimal()
+# That looks visually more appealing, however now there are multiple visuals of data which can lead to fatigue. Let's see if we can combine them into one or two visuals instead.
+```
+
+##### Quantity - Mean; Median; & Mode Combined & Visually Appealing
+```{r}
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+mean_val <- mean(Sales$Quantity, na.rm = TRUE)
+median_val <- median(Sales$Quantity, na.rm = TRUE)
+
+# Custom mode function
+get_modes <- function(v) {
+   freq <- table(v)
+  max_freq <- max(freq)
+  as.numeric(names(freq)[freq == max_freq])
+}
+
+mode_vals <- get_modes(Sales$Quantity)
+
+hist_data <- hist(Sales$Quantity, plot = FALSE)
+y_max <- max(hist_data$counts)
+x_annotate <- max(Sales$Quantity) * 0.6
+
+# Plot
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "white", alpha = 0.6) +
+
+  # Mean line and label
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.65,
+           label = paste("Mean:", round(mean_val, 2)),
+           hjust = 0, color = "blue", size = 4) +
+
+  # Median line and label
+  geom_vline(xintercept = median_val, color = "purple", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.60,
+           label = paste("Median:", round(median_val, 2)),
+           hjust = 0, color = "purple", size = 4) +
+
+  # Mode line and label
+  geom_vline(xintercept = mode_vals, color = "red", linetype = "dashed", size = 1.2) +
+  annotate("text", x = x_annotate, y = y_max * 0.55,
+           label = paste("Mode:", round(mode_vals, 2)),
+           hjust = 0, color = "red", size = 4) +
+
+  scale_x_continuous(
+    expand = expansion(mult = c(0.02, 0.08))
+  ) +
+  labs(title = "Histogram of Quantity with Mean, Median, and Mode",
+       x = "Quantity", y = "Frequency") +
+  theme_minimal()
+# By condensing the data into one chart, analysts and others are able to quickly gather the information in the data.
+```
+
+### Measures of Dispersion
+##### Standard Deviation - Total Sales
+```{r}
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+sd_val <- sd(Sales$TotalSales, na.rm = TRUE)
+mean_val
+sd_val
+max_count <- max(hist(Sales$TotalSales, plot = FALSE)$counts)
+
+# SD = 402.0052 or rounded to 402.01
+
+#Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "white", alpha = 0.7) +
+
+  # Mean line
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = max_count * 0.4,
+         label = paste0("Mean:\n$", round(mean_val, 2)),
+         color = "blue", size = 3, angle = 90, vjust = -0.5) +
+
+  # ±1 SD lines
+  geom_vline(xintercept = mean_val + 1 * sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val + sd_val, y = max_count * 0.4,
+         label = paste0("+1 SD:\n$", round(mean_val + sd_val, 2)),
+         color = "red", size = 3, angle = 90, vjust = -0.5) +
+  geom_vline(xintercept = mean_val - 1 * sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val - sd_val, y = max_count * 0.4,
+         label = paste0("-1 SD:\n$", round(mean_val - sd_val, 2)),
+         color = "red", size = 3, angle = 90, vjust = -0.5) +
+
+  scale_x_continuous(labels = scales::label_dollar()) +
+  labs(
+    title = "Distribution of Total Sales with +/- 1 SD",
+    x = "Total Sales (USD)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# Based on the visual provided by the data above/below (dependent on how this shakes out when published) it looks to show that a majority of the total sales would fall below the mean but above the -1 standard deviation. Which makes logical sense as most people would prefer to purchase items at a lower cost as opposed to a higher cost. But here we would also need to determine whether the "higher" points on the x-axis are simply due to a larger quantity being purchased as opposed to multiple single items purchased separately.So in essence, it is typical for the total sales (across the board) to fall within $7 & $811 per transaction. (That's a huge spread to try and plan for/around.)
+```
+
+##### Standard Deviation - Unit Price
+```{r}
+sd(Sales$UnitPrice, na.rm = TRUE)
+mean_val <- mean(Sales$UnitPrice, na.rm = TRUE)
+sd_val <- sd(Sales$UnitPrice, na.rm = TRUE)
+mean_val
+
+# SD = 28.69213 or rounded to 28.69
+
+#Plot
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_histogram(binwidth = 25, fill = "skyblue", color = "white", alpha = 0.5) +
+
+  # Mean line
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = 75,
+           label = paste0("Mean:\n$", round(mean_val, 2)),
+           color = "blue", size = 3, angle = 90, vjust = -0.5) +
+
+  # ±1 SD lines
+  geom_vline(xintercept = mean_val + sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val + sd_val, y = 75,
+           label = paste0("+1 SD:\n$", round(mean_val + sd_val, 2)),
+           color = "red", size = 3, angle = 90, vjust = -0.5) +
+  geom_vline(xintercept = mean_val - sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val - sd_val, y = 75,
+           label = paste0("-1 SD:\n$", round(mean_val - sd_val, 2)),
+           color = "red", size = 3, angle = 90, vjust = -0.5) +
+
+  # ±2 SD lines
+  geom_vline(xintercept = mean_val + 2 * sd_val, color = "darkgreen", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val + 2 * sd_val, y = 75,
+           label = paste0("+2 SD:\n$", round(mean_val + 2 * sd_val, 2)),
+           color = "darkgreen", size = 3, angle = 90, vjust = -0.5) +
+  geom_vline(xintercept = mean_val - 2 * sd_val, color = "darkgreen", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val - 2 * sd_val, y = 75,
+           label = paste0("-2 SD:\n$", round(mean_val - 2 * sd_val, 2)),
+           color = "darkgreen", size = 3, angle = 90, vjust = -0.5) +
+
+  scale_x_continuous(labels = scales::label_dollar()) +
+  labs(
+    title = "Distribution of Unit Price with Labeled Mean and +/-2 SD",
+    x = "Unit Price (USD)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# For unit price, the average cost is $52.41 and the standard deviation is +/- $28.69. While we can typically anticipate that the unit price will fall between the $23.72 & $81.11 range.There are some outliers that can fall within the +/-2 SD, mainly the +2 side. So we can also reasonably expect the cost per unit to be upwards around $109.80. Purchases at this higher price occurred however they were amongst the lower frequencies. Thus, products that fall within the range of +/- 1 SD are more likely to be purchased by the consumers from around the world.
+```
+
+##### Standard Deviation - Quantity
+```{r}
+# Calculate mean and standard deviation for Quantity
+mean_val <- mean(Sales$Quantity, na.rm = TRUE)
+sd_val <- sd(Sales$Quantity, na.rm = TRUE)
+sd_val
+mean_val
+
+# SD = 5.664644 or rounded to 5.66
+
+#Plot
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "white", alpha = 0.7) +
+
+  # Mean line
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = 35,
+           label = paste0("Mean:\n", round(mean_val, 2)),
+           color = "blue", size = 3, angle = 0, vjust = -0.2) +
+
+  # ±1 SD lines
+  geom_vline(xintercept = mean_val + sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val + sd_val, y = 35,
+           label = paste0("+1 SD:\n", round(mean_val + sd_val, 2)),
+           color = "red", size = 3, angle = 0, vjust = -0.2) +
+  geom_vline(xintercept = mean_val - sd_val, color = "red", linetype = "dotted", size = 1.2) +
+  annotate("text", x = mean_val - sd_val, y = 35,
+           label = paste0("-1 SD:\n", round(mean_val - sd_val, 2)),
+           color = "red", size = 3, angle = 0, vjust = -0.2) +
+  scale_x_continuous() +
+  labs(
+    title = "Distribution of Quantity with Labeled Mean and +/-1 SD",
+    x = "Quantity",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# The mean quantity sold is 9.59 units at a time; a majority of sales were made within 1 standard deviation (+/-5.66 units) of this number. This means that most purchases that occur are going to typically fall within roughly 4- 15 units purchased at a time. This can be used to incite special offers or deals to entice additional purchases. 
+```
+
+###### Variance - Total Sales
+```{r}
+# Calculate variance and mean
+var_val <- var(Sales$TotalSales, na.rm = TRUE)
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+var_val
+
+# Var = 161,608.18 (large variance typically can show inconsistent sales in this case possibly due to the different quantities or unit prices)
+
+# Estimate peak density for better label placement
+peak_density <- max(density(Sales$TotalSales, na.rm = TRUE)$y)
+
+# Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed") +
+  annotate("text", x = mean_val, y = peak_density * 0.9,
+           label = paste0("Variance: ", round(var_val, 2)),
+           color = "darkblue", size = 4, angle = 0, vjust = -0.5) +
+  labs(title = "Density Plot of Total Sales with Variance",
+       x = "Total Sales (USD)", y = "Density") +
+  theme_minimal()
+
+# The variance of total sales is 161,608.18; this tells us there is a large disconnect between the total sales data. This can be attributed to the disproportioned unit quantities sold across the board. Given such a large variance being reflected, I would not recommend the variance of total sales be used when making any significant decisions involving price changes or deals/offers. However, a path forward may be to separate this into the regions and then determine the variance across each region individually or performing that same breakout by product lines. By doing that we may be able to provide a lower variance and see what types of information we can gleen from those areas. 
+```
+
+###### Variance - Unit Price
+```{r}
+# Calculate variance
+var_val <- var(Sales$UnitPrice, na.rm = TRUE)
+
+# Var = 823.24
+
+#Plot
+ggplot(Sales, aes(x = "", y = UnitPrice)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue") +
+  annotate("text", x = "", y = max(Sales$UnitPrice, na.rm = TRUE) * 0.95,
+           label = paste0("Variance: ", round(var_val, 2)),
+           color = "darkred", size = 4, fontface = "bold") +
+  labs(title = "Boxplot of Unit Price with Variance",
+       x = "", y = "Unit Price (USD)") +
+  theme_minimal()
+
+# For unit price, I would contend that a variance of $823.24 is high, especially given previous data where the unit price average is $409 and median price is $271. Unfortunately, like other data points we've looked at, this can be due to the inconsistent quantities purchased across the different product lines. And much like those issues, there are other ways we would need to further analyze the data to ensure we are getting the accurate sight picture on this information. (Also I don't know if a boxplot was the best option to use here)
+```
+
+###### Variance - Quantity
+```{r}
+# Calculate variance
+var_val <- var(Sales$Quantity, na.rm = TRUE)
+var_val
+max_count <- max(hist(Sales$Quantity, plot = FALSE)$counts)
+
+# Var = 32.09
+
+#Plot
+ggplot(Sales, aes(x = Quantity)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "white", alpha = 0.6) +
+  annotate("text", x = Inf, y = max_count * 0.9,
+           label = paste0("Variance: ", round(var_val, 2)),
+           hjust = 1.1, vjust = 1.5, size = 4, color = "darkblue") +
+  labs(
+    title = "Distribution of Quantity with Variance Annotation",
+    x = "Quantity",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+# The variance for quantity is relatively low at 32.09. Across a data set of 495 rows that isn't a big variance, but should still be carefully analyzed. We can utilize the visualization to pinpoint quantities that have higher (and lower) frequencies and then determine through additional analysis whether those are due to the product lines or regions. 
+```
+
+##### Inter Quartile Range
+```{r}
+# Load data
+Sales <- read.csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 520 - Statistics for Data Science/sales_data_sample.csv")
+
+# Define Sales Groupings
+Sales$OrderDate <- as.Date(Sales$OrderDate, format = "%m/%d/%Y")  # adjust format if needed
+Sales$OrderQuarter <- paste0(year(Sales$OrderDate), " Q", quarter(Sales$OrderDate))
+
+# Calculate & Label Median
+median_labels <- Sales %>%
+  group_by(OrderQuarter) %>%
+  summarise(MedianSales = median(TotalSales, na.rm = TRUE))
+
+# Calculate & Label Quartiles for each quarter
+quartile_labels <- Sales %>%
+  group_by(OrderQuarter) %>%
+  summarise(
+    Q1 = quantile(TotalSales, 0.25, na.rm = TRUE),
+    Q3 = quantile(TotalSales, 0.75, na.rm = TRUE)
+  )
+
+# Plot boxplot
+ggplot(Sales, aes(x = OrderQuarter, y = TotalSales)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", outlier.color = "blue") +
+  geom_text(data = quartile_labels,
+            aes(x = OrderQuarter, y = Q1,
+                label = paste0("Q1:\n$", round(Q1, 2))),
+            color = "red", size = 2, vjust = -0.5) +
+  geom_text(data = quartile_labels,
+            aes(x = OrderQuarter, y = Q3,
+                label = paste0("Q3:\n$", round(Q3, 2))),
+            color = "darkgreen", size = 2, vjust = -0.5) +
+  geom_text(data = median_labels,
+          aes(x = OrderQuarter, y = MedianSales,
+              label = paste0("Median:\n$", round(MedianSales, 2))),
+          color = "black", size = 2, vjust = -0.5) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(title = "Total Sales by Quarter",
+       x = "Order Quarter", y = "Total Sales (USD)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# The IQR lets us see the value of the total sales across the months within each CY quarter. It removes and excludes the outliers (blue dots) and then gives the range of total sales made in the quarter from lowest to highest. Then we also labeled the median so we can see the absolute middle of that time frame. 
+```
+
+### Statistics Moments for the dataset.
+##### Mean, Variance, Skew, & Kurtosis - Total Sales
+```{r}
+mean(Sales$TotalSales, na.rm = TRUE)
+var(Sales$TotalSales, na.rm = TRUE)
+skewness(Sales$TotalSales, na.rm = TRUE)
+kurtosis(Sales$TotalSales, na.rm = TRUE)
+
+# Calculate moments
+mean_val <- mean(Sales$TotalSales, na.rm = TRUE)
+var_val <- var(Sales$TotalSales, na.rm = TRUE)
+skew_val <- skewness(Sales$TotalSales, na.rm = TRUE)
+kurt_val <- kurtosis(Sales$TotalSales, na.rm = TRUE)
+
+# Estimate peak density for label placement
+peak_density <- max(density(Sales$TotalSales, na.rm = TRUE)$y)
+
+# Plot
+ggplot(Sales, aes(x = TotalSales)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = peak_density * 0.9,
+           label = paste0("Mean: $", round(mean_val, 2)),
+           color = "blue", size = 4, angle = 0, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.75,
+           label = paste0("Variance: ", round(var_val, 2)),
+           color = "darkblue", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.6,
+           label = paste0("Skewness: ", round(skew_val, 2)),
+           color = "darkgreen", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.45,
+           label = paste0("Kurtosis: ", round(kurt_val, 2)),
+           color = "darkred", size = 4, vjust = -0.5) +
+  labs(title = "Density Plot of Total Sales with Statistical Moments",
+       x = "Total Sales (USD)", y = "Density") +
+  theme_minimal()
+
+# The interesting thing about performing these calculations on the total sales is getting to see the "disconnect" caused by other data points. I would hazard a safe guess that the quantity of each purchase is wreaking havoc on the data shown by Total Sales. I wonder if the breakout of quantity into separate rows (quantity = 19; now is 1 but there are 19 rows for this OrderID) would show a lower value for all four "moments". 
+```
+
+##### Mean, Variance, Skew, & Kurtosis - Unit Price
+```{r}
+mean(Sales$UnitPrice, na.rm = TRUE)
+var(Sales$UnitPrice, na.rm = TRUE)
+skewness(Sales$UnitPrice, na.rm = TRUE)
+kurtosis(Sales$UnitPrice, na.rm = TRUE)
+
+# Calculate moments
+mean_val <- mean(Sales$UnitPrice, na.rm = TRUE)
+var_val  <- var(Sales$UnitPrice, na.rm = TRUE)
+skew_val <- skewness(Sales$UnitPrice, na.rm = TRUE)
+kurt_val <- kurtosis(Sales$UnitPrice, na.rm = TRUE)
+
+# Estimate peak density for label placement
+peak_density <- max(density(Sales$UnitPrice, na.rm = TRUE)$y)
+
+# Plot
+ggplot(Sales, aes(x = UnitPrice)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = peak_density * 0.9,
+           label = paste0("Mean: $", round(mean_val, 2)),
+           color = "blue", size = 4, angle = 0, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.75,
+           label = paste0("Variance: ", round(var_val, 2)),
+           color = "darkblue", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.6,
+           label = paste0("Skewness: ", round(skew_val, 2)),
+           color = "darkgreen", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.45,
+           label = paste0("Kurtosis: ", round(kurt_val, 2)),
+           color = "darkred", size = 4, vjust = -0.5) +
+  labs(title = "Density Plot of Unit Price with Statistical Moments",
+       x = "Unit Price (USD)", y = "Density") +
+  theme_minimal()
+
+# This visual is pretty interesting as it is closer to an identical mirror view. This would lead me to begin believing the unit prices are an accurate data point to look at for our analysis. However, the actual range is $.98 to $144.08 which is still a large range. We'd still need to break this down across products and regions to get a better understanding of which price point is better situated to provide more revenue to the business. 
+```
+
+##### Mean, Variance, Skew, & Kurtosis - Quantity
+```{r}
+mean(Sales$Quantity, na.rm = TRUE)
+var(Sales$Quantity, na.rm = TRUE)
+skewness(Sales$Quantity, na.rm = TRUE)
+kurtosis(Sales$Quantity, na.rm = TRUE)
+
+# Calculate moments
+mean_val <- mean(Sales$Quantity, na.rm = TRUE)
+var_val  <- var(Sales$Quantity, na.rm = TRUE)
+skew_val <- skewness(Sales$Quantity, na.rm = TRUE)
+kurt_val <- kurtosis(Sales$Quantity, na.rm = TRUE)
+
+# Estimate peak density for label placement
+peak_density <- max(density(Sales$Quantity, na.rm = TRUE)$y)
+
+# Plot
+ggplot(Sales, aes(x = Quantity)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  geom_vline(xintercept = mean_val, color = "blue", linetype = "dashed", size = 1.2) +
+  annotate("text", x = mean_val, y = peak_density * 0.9,
+           label = paste0("Mean: ", round(mean_val, 2)),
+           color = "blue", size = 4, angle = 0, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.75,
+           label = paste0("Variance: ", round(var_val, 2)),
+           color = "darkblue", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.6,
+           label = paste0("Skewness: ", round(skew_val, 2)),
+           color = "darkgreen", size = 4, vjust = -0.5) +
+  annotate("text", x = mean_val, y = peak_density * 0.45,
+           label = paste0("Kurtosis: ", round(kurt_val, 2)),
+           color = "darkred", size = 4, vjust = -0.5) +
+  labs(title = "Density Plot of Quantity with Statistical Moments",
+       x = "Quantity", y = "Density") +
+  theme_minimal()
+
+# Similarly to the Unit Price model, this visual is also closer to an identical mirror view. Quantity also might be a good place to start our analysis. However, the actual range is 1 to 19 which can be considered large or small dependent on the analyst and the overall view. We'd still need to break this down across products and regions to get a better understanding of which price point is better situated to provide more revenue to the business. 
+```
+
+### Experiment with histogram binning for the categorical data in R.
+#### This is open-ended intentionally because this dataset isn’t ideal for binning, but I want you to build something using binning just to see how it works.
+```{r}
+category_freq <- table(Sales$Product)
+cut_freq <- cut(category_freq, breaks = quantile(category_freq, probs = seq(0, 1, 0.25)), include.lowest = TRUE)
+
+data.frame(Category = names(category_freq), Frequency = as.numeric(category_freq), Bin = cut_freq)
+
+# Here I binned the product column to tell me the frequency of which each product appeared in the dataset. The Bin column was added and creates a range of frequencies that the products would then fall into. We can also do this with the Unit Prices or Quantities. Although I didn't have much luck in my attempts.
+```
