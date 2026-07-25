@@ -3,5 +3,5 @@
 # Contact
 
 Email: not-providing-here  
-GitHub: (https://github.com/LHembree25)  
-LinkedIn: (www.linkedin.com/in/lhembree25)  
+GitHub: [LHembree25](https://github.com/LHembree25)  
+LinkedIn: [LHembree25](www.linkedin.com/in/lhembree25)  
