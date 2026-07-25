@@ -21,7 +21,7 @@ Includes data preparation, feature selection, regression and classification mode
 
 Demonstrates applied machine learning.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/1d924076b6d20f09c857e7a7ab714aa0cc563c2a/Project_02_Predictive%20Analytics
+Project folder: https://github.com/LHembree25/Portfolio/tree/1d924076b6d20f09c857e7a7ab714aa0cc563c2a/Project_02_PredictiveAnalytics
 
 
 ## Housing Affordability Forecasting
