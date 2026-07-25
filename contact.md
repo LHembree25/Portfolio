@@ -4,4 +4,4 @@
 
 Email: not-providing-here  
 GitHub: [LHembree25](https://github.com/LHembree25)  
-LinkedIn: [LHembree25](www.linkedin.com/in/lhembree25)  
+LinkedIn: [LHembree25](https://linkedin.com/in/lhembree25)  
