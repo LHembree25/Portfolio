@@ -11,7 +11,7 @@ Includes notebook, commentary, and results.
 
 Demonstrates applied generative AI evaluation.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_01_InstructionGapDetection
+Project folder: [Instruction Gap Detection](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_01_InstructionGapDetection)
 
 
 ## Video Game Sales Predictions
@@ -21,7 +21,7 @@ Includes data preparation, feature selection, regression and classification mode
 
 Demonstrates applied machine learning.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/1d924076b6d20f09c857e7a7ab714aa0cc563c2a/Project_02_PredictiveAnalytics
+Project folder: [Predictive Analytics](https://github.com/LHembree25/Portfolio/tree/1d924076b6d20f09c857e7a7ab714aa0cc563c2a/Project_02_PredictiveAnalytics)
 
 
 ## Housing Affordability Forecasting
@@ -31,7 +31,7 @@ Includes data ingestion, affordability index construction, and forecasting.
 
 Demonstrates statistical modeling and economic analysis.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/23b4071640dbb774a04ebac33fca7b7e2f71bf16/Project_03_ForecastingModel
+Project folder: [Forecasting Model](https://github.com/LHembree25/Portfolio/tree/23b4071640dbb774a04ebac33fca7b7e2f71bf16/Project_03_ForecastingModel)
 
 
 ## Book Recommendation Engine
@@ -41,7 +41,7 @@ Includes similarity scoring, recommendation logic, and evaluation.
 
 Demonstrates algorithmic reasoning.
 
-Project folder: https://github.com/LHembree25/Portfolio/blob/21fe953dc30a37d8d4a7138edab9420588b0cb5e/Project_10_BookRecommendation
+Project folder: [Book Recommender](https://github.com/LHembree25/Portfolio/blob/21fe953dc30a37d8d4a7138edab9420588b0cb5e/Project_10_BookRecommendation)
 
 
 ## Visualizing Aggregated Data
@@ -49,7 +49,7 @@ Power BI dashboard with multi-visual layout, aggregated metrics, and narrative d
 
 Demonstrates data storytelling and executive-level visualization.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_05_ComplaintVisualizations
+Project folder: [Visualize Aggregated Data](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_05_ComplaintVisualizations)
 
 
 ## Vehicle Linear Regression
@@ -59,7 +59,7 @@ Includes feature engineering, model fitting, and interpretation.
 
 Demonstrates technician-level statistical modeling.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_06_VehicleLinearRegression
+Project folder: [Linear Regression](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_06_VehicleLinearRegression)
 
 
 ## Data Preparation Steps
@@ -67,13 +67,13 @@ Notebook demonstrating structured data cleaning, transformation, and preparation
 
 Includes missing-value handling, encoding, normalization, and dataset structuring.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_07_DataPreps
+Project folder: [Data Preparation](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_07_DataPreps)
 
 
 ## Descriptive Statistics in R
 R-based statistical analysis including descriptive statistics, distribution analysis, summary tables, and basic visualization.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_08_DescriptiveStatistics
+Project folder: [Descriptive Statistics](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_08_DescriptiveStatistics)
 
 
 ## Generative AI Prompts and Responses
@@ -83,7 +83,7 @@ Includes evaluation of model behavior, prompt design, and response analysis.
 
 Demonstrates applied generative AI experimentation.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_09_GenAIPrompts
+Project folder: [Gen AI Prompting](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_09_GenAIPrompts)
 
 
 ## Movie Recommendation System
@@ -93,4 +93,4 @@ Includes data ingestion, similarity scoring, recommendation output, and evaluati
 
 Demonstrates applied machine learning and recommender-system design.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_04_MovieRecommender
+Project folder: [Movie Recommender](https://github.com/LHembree25/Portfolio/tree/4ba7d6b13743b4a8e13169bb50f64bb053342636/Project_04_MovieRecommender)
