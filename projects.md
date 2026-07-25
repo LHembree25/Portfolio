@@ -4,7 +4,7 @@
 
 ## Instruction Gap Detection
 Evaluation of procedural instructions using GPT‑4o‑mini. Five experiments testing gap detection, ambiguity, domain assumptions, and step audits. Includes notebook, commentary, and results. Demonstrates applied generative AI evaluation.
-Project folder: https://github.com/LHembree25/Portfolio/tree/main/InstructionGapDetection
+Project folder: Project_01_InstructionGapDetection
 
 ## Video Game Sales Predictions
 Predictive modeling using the Video Game Sales with Ratings dataset. Includes data preparation, feature selection, regression and classification models, and evaluation. Demonstrates applied machine learning.
