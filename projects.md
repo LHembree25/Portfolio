@@ -21,7 +21,7 @@ Includes data preparation, feature selection, regression and classification mode
 
 Demonstrates applied machine learning.
 
-Project folder: *(add your link here when ready)*
+Project folder: https://github.com/LHembree25/Portfolio/tree/299c0d96a80a54cebd54d224a9b8aa64b8e2ee6e/Project_02_TBD
 
 
 ## Housing Affordability Forecasting
@@ -31,7 +31,7 @@ Includes data ingestion, affordability index construction, and forecasting.
 
 Demonstrates statistical modeling and economic analysis.
 
-Project folder: *(add your link here when ready)*
+Project folder: https://github.com/LHembree25/Portfolio/tree/299c0d96a80a54cebd54d224a9b8aa64b8e2ee6e/Project_03_TBD
 
 
 ## Book Recommendation Engine
@@ -41,7 +41,7 @@ Includes similarity scoring, recommendation logic, and evaluation.
 
 Demonstrates algorithmic reasoning.
 
-Project folder: *(add your link here when ready)*
+Project folder: https://github.com/LHembree25/Portfolio/tree/299c0d96a80a54cebd54d224a9b8aa64b8e2ee6e/Project_04_MovieRecommender
 
 
 ## Visualizing Aggregated Data
