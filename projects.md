@@ -31,7 +31,7 @@ Includes data ingestion, affordability index construction, and forecasting.
 
 Demonstrates statistical modeling and economic analysis.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/299c0d96a80a54cebd54d224a9b8aa64b8e2ee6e/Project_03_TBD
+Project folder: https://github.com/LHembree25/Portfolio/tree/23b4071640dbb774a04ebac33fca7b7e2f71bf16/Project_03_ForecastingModel
 
 
 ## Book Recommendation Engine
@@ -41,7 +41,7 @@ Includes similarity scoring, recommendation logic, and evaluation.
 
 Demonstrates algorithmic reasoning.
 
-Project folder: https://github.com/LHembree25/Portfolio/tree/299c0d96a80a54cebd54d224a9b8aa64b8e2ee6e/Project_04_MovieRecommender
+Project folder: https://github.com/LHembree25/Portfolio/blob/21fe953dc30a37d8d4a7138edab9420588b0cb5e/Project_10_BookRecommendation
 
 
 ## Visualizing Aggregated Data
