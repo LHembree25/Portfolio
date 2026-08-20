@@ -1,0 +1,394 @@
+# Import libraries
+import json
+
+# craft instructions & responses
+data = [
+    {"instruction": "Identify unclear or incomplete steps in the following instructions. Explain why a novice would struggle.", 
+     "response": "Step 1 uses unclear terminology. Step 4 is ambiguous about jack height. Step 8 lacks tightening sequence. Step 9 omits torque guidance. The instructions assume tool familiarity and omit safety steps such as hazard lights and ground stability checks."},
+
+    {"instruction": "Identify unclear or incomplete steps in the following instructions. Explain why a novice would struggle.", 
+     "response": "Diamond holes are not defined. Stitch tension is unclear. Heel alignment lacks orientation guidance. Running stitch technique is assumed knowledge. Bow tying and lace finishing steps assume prior experience. Size adjustment notes lack actionable detail."},
+
+    {"instruction": "Evaluate each step in the following instructions for clarity, completeness, and assumptions. Output a table with columns: step_number, issue_detected, severity, recommended_fix.", 
+     "response": "Step 0 missing hazard lights. Step 1 unclear location. Step 2 missing level-ground requirement. Step 3 missing star-pattern loosening. Step 4 unclear jack height. Step 5 missing safe storage of lug nuts. Step 6 missing debris check. Step 7 missing compatibility check. Step 8 missing star-pattern tightening. Step 9 unclear final torque check."},
+
+    {"instruction": "Identify domain-specific gaps in the following moccasin assembly instructions. Focus on missing tool requirements, skipped alignment steps, unclear stitching transitions, and any assumptions a beginner would not know.", 
+     "response": "Missing needle type. Missing awl. Missing lace measurement guidance. Heel alignment unclear. Running stitch not defined. Stitch tension unspecified. Transition between toe stitching and heel assembly is abrupt. Size-based hole selection lacks visual orientation."},
+
+    {"instruction": "Compare the following two instruction sets. Identify gap categories such as missing microsteps, unclear transitions, unstated assumptions, missing tool requirements, or domain-specific ambiguity.", 
+     "response": "Flat tire instructions lack safety steps, tool requirements, and jack operation detail. Moccasin instructions lack alignment guidance, stitch transitions, and tool specification. Both assume prior knowledge and omit microsteps needed for novices."}
+]
+
+with open("gap_detection_training.jsonl", "w") as f:
+    for entry in data:
+        f.write(json.dumps(entry) + "\n")
+
+# Import libraries
+from datasets import load_dataset
+
+# Step 2 — Load dataset
+dataset = load_dataset("json", data_files="gap_detection_training.jsonl")
+train_dataset = dataset["train"]
+
+# Flatten list fields into strings
+def flatten_fields(example):
+    example["instruction"] = " ".join(example["instruction"]) if isinstance(example["instruction"], list) else example["instruction"]
+    example["response"] = " ".join(example["response"]) if isinstance(example["response"], list) else example["response"]
+    return example
+
+# Apply flattening
+train_dataset = train_dataset.map(flatten_fields)
+
+# Display dataset structure
+train_dataset
+
+# Validate dataset fields
+print(train_dataset.column_names)
+print(train_dataset[0])
+
+# Import libraries
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-2")
+
+# Ensure pad token exists
+if tokenizer.pad_token is None:
+    tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
+
+# Import libraries
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Call sign = Maverick
+model_name = "microsoft/phi-2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+# Fix for Phi-2: add a pad token
+if tokenizer.pad_token is None:
+    tokenizer.add_special_tokens({'pad_token': tokenizer.eos_token})
+    model.resize_token_embeddings(len(tokenizer))
+
+model.config.pad_token_id = tokenizer.pad_token_id
+
+# Import libraries
+from transformers import TrainingArguments
+
+# What are we gonna teach
+training_args = TrainingArguments(
+    output_dir="lex-gap-model",
+    overwrite_output_dir=True,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=2,
+    learning_rate=2e-5,
+    num_train_epochs=3,
+    logging_steps=10,
+    save_steps=50,
+    evaluation_strategy="no",
+    save_safetensors=False    # <-- CRITICAL
+)
+
+# Import libraries
+from trl import SFTTrainer
+
+def format_example(example):
+    instructions = example["instruction"]
+    responses = example["response"]
+
+    if isinstance(instructions, list):
+        return [i + "\n" + r for i, r in zip(instructions, responses)]
+
+    return instructions + "\n" + responses
+    
+# Who's gonna teach
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=train_dataset,
+    args=training_args,
+    formatting_func=format_example,
+    dataset_text_field=None,
+    max_seq_length=512,
+    packing=False
+)
+
+# Heading to Top Gun to teach
+trainer.train()
+
+# Introduced by callsign
+# Correct model save block
+
+# Save the trained model weights
+trainer.model.save_pretrained("lex-gap-model")
+
+# Save tokenizer
+tokenizer.save_pretrained("lex-gap-model")
+
+# Import libraries
+from transformers import PhiForCausalLM, AutoTokenizer, pipeline
+
+model = PhiForCausalLM.from_pretrained(
+    "lex-gap-model",
+    trust_remote_code=True,
+    device_map="auto"
+)
+
+tokenizer = AutoTokenizer.from_pretrained("lex-gap-model")
+
+# pipe parameters
+pipe = pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    max_new_tokens=400,
+    device_map="auto"
+)
+
+# Import libraries/packages
+from transformers import StoppingCriteria, StoppingCriteriaList
+import re
+
+# Stop when model generates NEW steps (10, 11, 12...)
+class StopOnNewListStart(StoppingCriteria):
+    def __call__(self, input_ids, scores):
+        text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+
+        # Detect ANY new block starting with Step 1
+        return (
+            re.search(r"\n\([1-9][0-9]\)", text) or
+            re.search(r"Step\s1[0-9]?", text)   # catches Step 1, Step 10, Step 11, Step 19
+        )
+
+class StopOnRepetition(StoppingCriteria):
+    def __call__(self, input_ids, scores):
+        text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+
+        # Detect repeated step-gap lines
+        return (
+            text.count("Step 0 gap:") > 1 or
+            text.count("Step 1 gap:") > 1 or
+            text.count("Step 2 gap:") > 1 or
+            text.count("Step 3 gap:") > 1 or
+            text.count("Step 4 gap:") > 1 or
+            text.count("Step 5 gap:") > 1 or
+            text.count("Step 6 gap:") > 1 or
+            text.count("Step 7 gap:") > 1 or
+            text.count("Step 8 gap:") > 1 or
+            text.count("Step 9 gap:") > 1
+        )
+        
+stops = StoppingCriteriaList([
+    StopOnNewListStart(),
+    StopOnRepetition()
+])
+
+def run_eval(prompt):
+    return pipe(
+        prompt + "\n\nAnalysis (begin line-mode):\n",
+        max_new_tokens=400,
+        do_sample=True,
+        temperature=0.2,
+        stopping_criteria=stops
+    )[0]["generated_text"]
+
+# Speak to me Goose
+prompt_exp1 = """
+Identify unclear or incomplete steps in the following instructions.
+For each numbered step (0) through (9), output exactly one line in the format:
+"Step X gap: <description>"
+Do not summarize. Do not repeat any step. Produce exactly 10 lines.
+
+Flat tires are one of the most usual repairs that you may need to do because on
+the road itself, there are many things that will cause your tyres to burst.
+
+(0) Stop at the road side and put a triangular warning sign to warn cars about stopping.
+(1) Locate spare tyres (usually in the car butt bonnet), and make sure that it is inflated.
+(2) Engage parking break and vehicle is in Parking Gear (Auto) or in Neutral Gear (Manual).
+(3) Use tire wrench to loosen lug nuts.
+(4) Jack off car until tire finishes on ground.
+(5) Remove lug nuts.
+(6) Remove deflated tire.
+(7) Replace with spare tyres.
+(8) Tighten lug nuts.
+(9) Release jack until tire touches ground.
+"""
+
+result_exp1 = run_eval(prompt_exp1)
+print(result_exp1)
+
+# Tell me something Iceman
+prompt_exp2 = """
+Identify unclear or incomplete steps in the following instructions.
+Explain why a novice would struggle.
+
+Step-by-Step Instructions:
+
+1. Tie a knot in one end of one of the laces just above the tip. Match up the diamond holes in the sole and toe plug, with the other end of the lace, sew from the outside of the sole up though the toe plug. After pulling the knot tight pass the lace back through the diamond hole in the sole only. Your lace should have looped the two pieces of leather together and be in between the sole and toe plug.
+2. Now pass the lace on the inside of your moccasin through the next hole in the sole and pull tight to form a pucker between the stitches. Hold the leather in place with your thumb and sew through the next hole in the toe plug from the outside and pull your stitch tight. Continue around the entire toe passing the lace out through the sole and down through the toe plug, pulling each stitch tight, until you reach the next set of diamond holes.
+3. Stitch through diamond holes twice, ending back on the outside of the sole. Tie the lace in a knot as close to the leather as possible. Trim off any excess lace.
+4. Cut one lace in half and use to assemble moccasin heels. Fold the ends of the sole around as shown and match up the appropriate set of holes. Then fold the heel flap up over the back of the moccasin.
+
+NOTE: Each moccasin kit is designed to fit two shoe sizes. Depending on the size that will best fit you will determine how you will assemble the heel of the moccasin. The XS kit will make a 4/5, the S will make a 6/7, the M an 8/9 and the L will make a 10/11. To make the smaller of the sizes for the kit, match up the round holes on either side of the moccasin heel. Or, to make the larger size for your kit you will need to match up diamond holes on either side of the moccasin heel. 
+Starting with the upper right side hole, lace through to the inside of the mock then down to the left side lower hole. Lace through to the back by going through the right side lower hole and back out of the remaining upper hole. Once completed, the lacing should have an "X" on the inside as in the picture below. Then tie the loose ends in a square knot and trim off the excess lace. 
+
+5. Leaving about 6” of lace, go down through the left center hole in the toe plug, then out through the next hole. Begin lacing by folding the cuff over the edge of the moccasin sole and lining up the holes. Lace in and out through all three layers of leather in a running stitch. When you reach the heel of the moccasin, overlap 4 holes for smaller sizes and 3 holes for the large sizes.
+6. Continue running stitch all the way around the moccasin and finish by threading the lace out through the toe plug as you started and evening up the lace ends. Tie the laces in a bow and your moccasin is complete!
+
+NOTE: If making the smaller of the two sizes available for your kit you may need to cut off an extra set of holes from one end of the cuff after attaching. Larger moccasin sizes should use the cuff “as is.”
+"""
+
+result_exp2 = run_eval(prompt_exp2)
+print(result_exp2)
+
+# Rooster get out of there
+prompt_exp3 = """
+Evaluate each step in the following instructions for clarity, completeness, and assumptions.
+Output a table with columns: step_number, issue_detected, severity, recommended_fix.
+
+Instructions:
+
+Flat tires are one of the most usual repairs that you may need to do because on
+the road itself, there are many things that will cause your tyres to burst.
+
+It would be wise to have this on the car before facing this problem.
+
+(0) Stop at the road side and put a triangular warning sign to warn cars about stopping.
+(1) Locate spare tyres (usually in the car butt bonnet), and make sure that it is inflated.
+(2) Engage parking break and vehicle is in Parking Gear (Auto) or in Neutral Gear (Manual).
+(3) Use tire wrench to loosen lug nuts.
+(4) Jack off car until tire finishes on ground.
+(5) Remove lug nuts.
+(6) Remove deflated tire.
+(7) Replace with spare tyres.
+(8) Tighten lug nuts.
+(9) Release jack until tire touches ground.
+"""
+
+result_exp3 = run_eval(prompt_exp3)
+print(result_exp3)
+
+# Hangman you are a sight
+prompt_exp4 = """
+Identify domain-specific gaps in the following moccasin assembly instructions.
+Focus on missing tool requirements, skipped alignment steps, unclear stitching transitions,
+and any assumptions a beginner would not know.
+
+Instructions:
+
+1. Tie a knot in one end of one of the laces just above the tip. Match up the diamond holes
+in the sole and toe plug, with the other end of the lace, sew from the outside of the sole
+up through the toe plug. After pulling the knot tight pass the lace back through the diamond
+hole in the sole only. Your lace should have looped the two pieces of leather together and be
+in between the sole and toe plug.
+
+2. Now pass the lace on the inside of your moccasin through the next hole in the sole and pull
+tight to form a pucker between the stitches. Hold the leather in place with your thumb and sew
+through the next hole in the toe plug from the outside and pull your stitch tight. Continue
+around the entire toe passing the lace out through the sole and down through the toe plug,
+pulling each stitch tight, until you reach the next set of diamond holes.
+
+3. Stitch through diamond holes twice, ending back on the outside of the sole. Tie the lace in
+a knot as close to the leather as possible. Trim off any excess lace.
+
+4. Cut one lace in half and use to assemble moccasin heels. Fold the ends of the sole around as
+shown and match up the appropriate set of holes. Then fold the heel flap up over the back of
+the moccasin.
+
+NOTE: Each moccasin kit is designed to fit two shoe sizes. Depending on the size that will best
+fit you will determine how you will assemble the heel of the moccasin. The XS kit will make a
+4/5, the S will make a 6/7, the M an 8/9 and the L will make a 10/11. To make the smaller of the
+sizes for the kit, match up the round holes on either side of the moccasin heel. Or, to make the
+larger size for your kit you will need to match up diamond holes on either side of the moccasin heel.
+
+Starting with the upper right side hole, lace through to the inside of the moccasin then down to
+the left side lower hole. Lace through to the back by going through the right side lower hole and
+back out of the remaining upper hole. Once completed, the lacing should have an "X" on the inside.
+Then tie the loose ends in a square knot and trim off the excess lace.
+
+5. Leaving about 6" of lace, go down through the left center hole in the toe plug, then out through
+the next hole. Begin lacing by folding the cuff over the edge of the moccasin sole and lining up
+the holes. Lace in and out through all three layers of leather in a running stitch. When you reach
+the wheel of the moccasin, overlap 4 holes for smaller sizes and 3 holes for the larger sizes.
+
+6. Continue running stitch all the way around the moccasin and finish by threading the lace out
+through the toe plug as you started and evening up the lace ends. Tie the laces in a bow and your
+moccasin is complete.
+"""
+
+result_exp4 = run_eval(prompt_exp4)
+print(result_exp4)
+
+# Let's put some skin in the game
+prompt_exp5 = """
+Compare the following two instruction sets. Identify gap categories such as missing microsteps,
+unclear transitions, unstated assumptions, missing tool requirements, or domain-specific ambiguity.
+
+Instruction Set A: Flat Tire
+(0) Stop at the road side and put a triangular warning sign to warn cars about stopping.
+(1) Locate spare tyres and make sure it is inflated.
+(2) Engage parking break and place vehicle in correct gear.
+(3) Loosen lug nuts.
+(4) Jack up car.
+(5) Remove lug nuts.
+(6) Remove deflated tire.
+(7) Replace with spare tire.
+(8) Tighten lug nuts.
+(9) Lower jack.
+
+Instruction Set B: Moccasin Kit
+1. Tie a knot in one end of one of the laces just above the tip. Match up the diamond holes
+in the sole and toe plug, with the other end of the lace, sew from the outside of the sole
+up through the toe plug. After pulling the knot tight pass the lace back through the diamond
+hole in the sole only. Your lace should have looped the two pieces of leather together and be
+in between the sole and toe plug.
+
+2. Now pass the lace on the inside of your moccasin through the next hole in the sole and pull
+tight to form a pucker between the stitches. Hold the leather in place with your thumb and sew
+through the next hole in the toe plug from the outside and pull your stitch tight. Continue
+around the entire toe passing the lace out through the sole and down through the toe plug,
+pulling each stitch tight, until you reach the next set of diamond holes.
+
+3. Stitch through diamond holes twice, ending back on the outside of the sole. Tie the lace in
+a knot as close to the leather as possible. Trim off any excess lace.
+
+4. Cut one lace in half and use to assemble moccasin heels. Fold the ends of the sole around as
+shown and match up the appropriate set of holes. Then fold the heel flap up over the back of
+the moccasin.
+
+NOTE: Each moccasin kit is designed to fit two shoe sizes. Depending on the size that will best
+fit you will determine how you will assemble the heel of the moccasin. The XS kit will make a
+4/5, the S will make a 6/7, the M an 8/9 and the L will make a 10/11. To make the smaller of the
+sizes for the kit, match up the round holes on either side of the moccasin heel. Or, to make the
+larger size for your kit you will need to match up diamond holes on either side of the moccasin heel.
+
+Starting with the upper right side hole, lace through to the inside of the moccasin then down to
+the left side lower hole. Lace through to the back by going through the right side lower hole and
+back out of the remaining upper hole. Once completed, the lacing should have an "X" on the inside.
+Then tie the loose ends in a square knot and trim off the excess lace.
+
+5. Leaving about 6" of lace, go down through the left center hole in the toe plug, then out through
+the next hole. Begin lacing by folding the cuff over the edge of the moccasin sole and lining up
+the holes. Lace in and out through all three layers of leather in a running stitch. When you reach
+the wheel of the moccasin, overlap 4 holes for smaller sizes and 3 holes for the larger sizes.
+
+6. Continue running stitch all the way around the moccasin and finish by threading the lace out
+through the toe plug as you started and evening up the lace ends. Tie the laces in a bow and your
+moccasin is complete.
+"""
+
+result_exp5 = run_eval(prompt_exp5)
+print(result_exp5)
+
+import json
+
+outputs = {
+    "exp1": result_exp1,
+    "exp2": result_exp2,
+    "exp3": result_exp3,
+    "exp4": result_exp4,
+    "exp5": result_exp5
+}
+
+with open("milestone3_outputs.json", "w") as f:
+    json.dump(outputs, f, indent=2)
+
+print(trainer.model)
