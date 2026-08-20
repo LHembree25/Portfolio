@@ -1,0 +1,64 @@
+import requests
+import base64
+from PIL import Image
+from io import BytesIO
+
+# Insert your API key here
+API_KEY = "USE YOUR OWN API"  ########<-------IMPORTANT NOTE
+
+# Stable Diffusion API endpoint
+url = "https://api.stability.ai/v2beta/stable-image/generate/core"
+
+prompt = "A yeti holding a meeting in a forest, with normal forest animals, in front of a Gemba Board"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Accept": "application/json"
+}
+
+files = {
+    "prompt": (None, prompt),
+    "output_format": (None, "png")
+}
+
+response = requests.post(url, headers=headers, files=files)
+
+if response.status_code == 200:
+    data = response.json()
+    image_base64 = data["image"]
+    image_bytes = base64.b64decode(image_base64)
+    image = Image.open(BytesIO(image_bytes))
+    display(image)
+else:
+    print("Error:", response.text)
+
+# Convert the generated image to bytes
+buffer = BytesIO()
+image.save(buffer, format="PNG")
+image_bytes = buffer.getvalue()
+
+edit_url = "https://api.stability.ai/v2beta/stable-image/generate/core"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Accept": "application/json"
+}
+
+files = {
+    "image": ("image.png", image_bytes, "image/png"),
+    "prompt": (None, "Convert the yeti holding a meeting in a forest, with normal forest animals, in front of a Gemba Boardscene into a watercolor painting"),
+    "strength": (None, "0.6"),
+    "mode": (None, "image-to-image"),
+    "output_format": (None, "png")
+}
+
+edit_response = requests.post(edit_url, headers=headers, files=files)
+
+if edit_response.status_code == 200:
+    edit_data = edit_response.json()
+    edited_base64 = edit_data["image"]
+    edited_bytes = base64.b64decode(edited_base64)
+    edited_image = Image.open(BytesIO(edited_bytes))
+    display(edited_image)
+else:
+    print("Error:", edit_response.text)
