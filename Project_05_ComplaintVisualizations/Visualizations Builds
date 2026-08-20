@@ -1,0 +1,270 @@
+# import libraries
+import numpy as pd
+import pandas as pd
+
+# import file as pandas data frame
+airport_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 640 - Data Presentation and Visualization/Week 9&10/complaints-by-airport.csv")
+category_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 640 - Data Presentation and Visualization/Week 9&10/complaints-by-category.csv")
+subcategory_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 640 - Data Presentation and Visualization/Week 9&10/complaints-by-subcategory.csv")
+iata_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 640 - Data Presentation and Visualization/Week 9&10/iata-icao.csv")
+
+# Preview
+airport_df.head()
+
+# Preview
+category_df.head()
+
+# Preview
+subcategory_df.head()
+
+# Preview
+iata_df.head()
+
+list(airport_df.columns)
+
+list(category_df.columns)
+
+list(subcategory_df.columns)
+
+list(iata_df.columns)
+
+# import libraries
+import matplotlib.pyplot as plt
+import matplotlib
+import seaborn as sns
+
+# define
+heat_df = (
+    category_df.groupby(["category", "year_month"])["count"]
+    .sum()
+    .reset_index()
+    .pivot(index="category", columns="year_month", values="count")
+    .fillna(0)
+)
+
+# sort
+cat_order = (
+    heat_df.sum(axis=1)
+    .sort_values(ascending=False)
+    .index
+)
+heat_df_sorted = heat_df.loc[cat_order]
+
+# compute percentile
+vmax_cap = heat_df_sorted[heat_df_sorted > 0].quantile(0.95).max()
+
+# plot
+plt.figure(figsize=(20, 16))
+ax = sns.heatmap(
+    heat_df_sorted,
+    cmap="Reds",
+    linewidths=0.3,
+    norm=matplotlib.colors.LogNorm(vmin=1, vmax=vmax_cap)
+)
+
+# remove scientific notation from colorbar
+ax.collections[0].colorbar.formatter = matplotlib.ticker.FormatStrFormatter('%d')
+ax.collections[0].colorbar.update_ticks()
+
+# thin y-axis labels
+plt.yticks(
+    ticks=range(0, len(heat_df_sorted.index), 3),
+    labels=heat_df_sorted.index[::3]
+)
+
+# thin x-axis labels
+plt.xticks(
+    ticks=range(0, len(heat_df_sorted.columns), 3),
+    labels=heat_df_sorted.columns[::3],
+    rotation=90
+)
+
+plt.title("TSA Complaints by Category Over Time (Log-Scaled, Sorted, Cleaned)")
+plt.xlabel("Month")
+plt.ylabel("Category")
+plt.tight_layout()
+plt.show()
+
+# define
+monthly = (
+    category_df.groupby(["category", "year_month"])["count"]
+    .sum()
+    .reset_index()
+)
+
+# shorten labels
+monthly["short_cat"] = monthly["category"].apply(
+    lambda x: x[:30] + " ..." if len(x) > 30 else x
+)
+
+# Plot
+plt.figure(figsize=(18, 10))
+sns.boxplot(
+    data=monthly,
+    x="short_cat",
+    y="count",
+    hue="short_cat",
+    palette="Set3",
+    legend=False
+)
+
+plt.yscale("log")
+
+# remove scientific notation on primary y-axis
+plt.gca().yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+plt.gca().ticklabel_format(style='plain', axis='y')
+
+plt.xticks(rotation=45, ha="right")
+plt.title("Monthly Distribution of TSA Complaints by Category (Log Scale)")
+plt.xlabel("Category")
+plt.ylabel("Monthly Complaint Count (log scale)")
+plt.tight_layout()
+plt.show()
+
+# filter to us
+iata_us = iata_df[iata_df["country_code"] == "US"]
+
+# define
+airport_totals = (
+    airport_df.groupby("airport")["count"]
+    .sum()
+    .reset_index()
+)
+
+# Merge with IATA coordinates
+map_df = airport_totals.merge(
+    iata_us,
+    left_on="airport",
+    right_on="iata",
+    how="left"
+)
+
+# drop na's
+map_df = map_df.dropna(subset=["latitude", "longitude"])
+
+# plot
+plt.figure(figsize=(12, 8))
+plt.scatter(
+    map_df["longitude"],
+    map_df["latitude"],
+    s=map_df["count"] / 50,
+    c=map_df["count"],
+    cmap="Reds",
+    alpha=0.7
+)
+
+plt.colorbar(label="Total Complaints")
+plt.title("Geographic Distribution of TSA Complaints (U.S. Airports Only)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.tight_layout()
+plt.show()
+
+# define
+airport_df["year_month"] = pd.to_datetime(airport_df["year_month"])
+
+trend_df = (
+    airport_df.groupby("year_month")["count"]
+    .sum()
+    .reset_index()
+    .sort_values("year_month")
+)
+
+trend_df["rolling"] = trend_df["count"].rolling(window=3, center=True).mean()
+
+#plot
+plt.figure(figsize=(14, 6))
+plt.plot(trend_df["year_month"], trend_df["rolling"], color="red")
+plt.title("TSA Complaint Trend (3-Month Rolling Avg)")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# impot library
+from matplotlib.ticker import ScalarFormatter
+
+# define
+cat_totals = (
+    category_df.groupby("category")["count"]
+    .sum()
+    .reset_index()
+)
+
+# Filter out categories with extremely low totals
+cat_totals = cat_totals[cat_totals["count"] >= 50]
+
+# Sort descending
+cat_totals = cat_totals.sort_values("count", ascending=False)
+
+# Shorten long labels
+cat_totals["short_label"] = cat_totals["category"].apply(
+    lambda x: x[:40] + " ..." if len(x) > 40 else x
+)
+
+# plot
+plt.figure(figsize=(12, 12))
+
+# create horizontal lines
+plt.hlines(
+    y=cat_totals["short_label"],
+    xmin=0,
+    xmax=cat_totals["count"],
+    color="gray",
+    linewidth=1
+)
+
+# plant dots
+plt.scatter(
+    cat_totals["count"],
+    cat_totals["short_label"],
+    color="green",
+    s=80
+)
+
+# Log scale without scientific notation
+plt.xscale("log")
+ax = plt.gca()
+ax.xaxis.set_major_formatter(ScalarFormatter())
+ax.ticklabel_format(style='plain', axis='x')
+
+plt.xlabel("Total Complaints (log scale)")
+plt.ylabel("Category")
+plt.title("TSA Complaint Categories — Lollipop Chart")
+plt.tight_layout()
+plt.show()
+
+# Aggregate subcategory totals
+sub_totals = (
+    subcategory_df.groupby("subcategory")["count"]
+    .sum()
+    .reset_index()
+)
+
+# Keep non-zero subcategories totals
+sub_totals = sub_totals[sub_totals["count"] > 0]
+
+# Sort to top 15 for readability
+sub_totals = sub_totals.sort_values("count", ascending=False).head(15)
+
+# Shorten labels for readability
+sub_totals["short_label"] = sub_totals["subcategory"].apply(
+    lambda x: x[:40] + " ..." if len(x) > 40 else x
+)
+
+# plot
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    data=sub_totals,
+    x="count",
+    y="short_label",
+    hue="short_label",
+    palette="Blues_r",
+    errorbar=None,
+    legend=False
+)
+
+plt.title("Top TSA Complaint Subcategories")
+plt.xlabel("Total Complaints")
+plt.ylabel("Subcategory")
+plt.tight_layout()
+plt.show()
