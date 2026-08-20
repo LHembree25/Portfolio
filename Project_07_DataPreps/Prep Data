@@ -1,0 +1,128 @@
+# Import Libraries
+import pandas as pd
+import numpy as np
+
+# Read in file
+metobj_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 540 - Data Preparation/Week 7&8 Data/MetObjects.csv")
+
+# Preview file
+metobj_df.head()
+
+# Check out the data
+metobj_df.info
+
+# Determine how many na values exist
+metobj_df.isna().sum()
+
+# drop the na values
+metobj_df.dropna()
+
+# determine if we can bin by Accession Year
+metobj_df["AccessionYear"].unique()
+
+# Values aren't clean so we have to manipulate the string to clean them
+# strip whitespace
+metobj_df.columns = metobj_df.columns.str.strip()
+
+# Convert to string
+col = metobj_df["AccessionYear"].astype(str).str.strip()
+
+# extract the year from each value
+years = col.str.extract(r"(\d{4})")[0]
+
+# ensure the years are numeric
+metobj_df["AccessionYear_clean"] = pd.to_numeric(years, errors="coerce")
+
+# injection due to noticing a stray "." after my values & it bugged me
+metobj_df["AccessionYear_clean"] = (
+    metobj_df["AccessionYear_clean"].astype("Int64")
+)
+
+# no need to bin if I did the manipulate strings part of Ch7
+
+# relook at Accession Year
+metobj_df["AccessionYear_clean"].unique()
+
+# Determine departments
+metobj_df["Department"].unique()
+
+# Create the groups
+Dept_Groups = {
+    "The American Wing": "Western Art",
+    "European Sculpture and Decorative Arts": "Western Art",
+    "European Paintings": "Western Art",
+    "Greek and Roman Art": "Ancient Western",
+    "Ancient Near Eastern Art": "Ancient",
+    "Egyptian Art": "Ancient",
+    "Medieval Art": "Historical",
+    "Arms and Armor": "Historical",
+    "Asian Art": "Non-Western",
+    "Islamic Art": "Non-Western",
+    "Arts of Africa, Oceania, and the Americas": "Non-Western",
+    "Modern and Contemporary Art": "Modern",
+    "Drawings and Prints": "Works on Paper",
+    "Photographs": "Works on Paper",
+    "Costume Institute": "Special Collections",
+    "Musical Instruments": "Special Collections",
+    "The Libraries": "Special Collections",
+    "Robert Lehman Collection": "Special Collections",
+    "The Cloisters": "Historical"
+}
+
+# apply the grouping
+metobj_df["Dept_Group"] = metobj_df["Department"].map(Dept_Groups)
+
+# create a cross tab
+metobj_df["Dept_Group"].value_counts()
+
+# preview
+metobj_df.head()
+
+# Set the index
+metobj_df = metobj_df.set_index(["Department", "Object Number"])
+
+# Pivot the data
+pivot = metobj_df.reset_index().pivot_table(
+    index="Department",
+    values="Object Number",
+    aggfunc="count"
+)
+
+# preview
+metobj_df.head()
+
+# convert accession yr to datetime
+metobj_df["AccessionYear_dt"] = pd.to_datetime(
+    metobj_df["AccessionYear"], 
+    errors="coerce"
+)
+
+# Generate a date range
+date_range = pd.date_range(start="1800-01-01", periods=100, freq="Y")
+
+# preview
+date_range
+
+# That didn't tell me a whole lot so let's try a different method that I was originally going to partially do for chapter 7.
+
+# bin 'em
+bins = list(range(1850, 2051, 50))
+
+# label 'em
+labels = [
+    "1850–1899",
+    "1900–1949",
+    "1950–1999",
+    "2000–2049"
+]
+
+#
+metobj_df["YearGroup_50"] = pd.cut(
+    metobj_df["AccessionYear_clean"],
+    bins=bins,
+    labels=labels,
+    right=False
+)
+
+# count 'em
+metobj_df["YearGroup_50"].value_counts().sort_index()
