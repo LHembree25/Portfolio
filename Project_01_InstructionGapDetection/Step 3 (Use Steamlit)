@@ -1,0 +1,24 @@
+# Import library/packages
+import streamlit as st
+from transformers import pipeline
+
+# Load fine-tuned model
+pipe = pipeline(
+    "text-generation",
+    model="lex-gap-model",
+    tokenizer="lex-gap-model",
+    max_new_tokens=200
+)
+
+st.title("Gap Detection Model Demo")
+
+st.write("Enter instructions. The model will return gap analysis in technician cadence.")
+
+user_input = st.text_area("Instructions")
+
+if st.button("Run"):
+    if user_input.strip():
+        result = pipe(user_input)[0]["generated_text"]
+        st.write(result)
+    else:
+        st.write("No input provided.")
