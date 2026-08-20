@@ -31,7 +31,7 @@ Includes data loading, preprocessing, CNN architecture definition, training, and
 
 Demonstrates applied neural network construction, model accuracy measurement, and confusion matrix analysis.
 
-Project folder: [Convolutional Neural Network (CNN)]([Convolutional Neural Network (CNN)](https://github.com/LHembree25/Portfolio/tree/main/Project_03_Build%20a%20Convolutional%20Neural%20Network%20%28CNN%29))
+Project folder: [Convolutional Neural Network (CNN)](https://github.com/LHembree25/Portfolio/tree/main/Project_03_Build%20a%20Convolutional%20Neural%20Network%20%28CNN%29))
 
 
 ## Childcare Affordability and Maternal Labor Force Participation Analysis
