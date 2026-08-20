@@ -1,0 +1,188 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+
+# Read in data
+vg_sales = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 680 - Applied Data Science/Project 1 Data/Video_Games_Sales.csv")
+
+
+vg_sales = vg_sales.dropna(subset=["Year", "Genre", "Platform", "Publisher"])
+vg_sales = vg_sales[vg_sales["Global_Sales"] > 0]
+
+
+vg_sales["Year"] = vg_sales["Year"].astype(int)
+vg_sales["Global_Sales_Log"] = np.log1p(vg_sales["Global_Sales"])
+
+# read in steam data
+steam_history = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 680 - Applied Data Science/Project 1 Data/steam_history.csv")
+master_games = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 680 - Applied Data Science/Project 1 Data/master_games.csv")
+steam_games = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 680 - Applied Data Science/Project 1 Data/steam_games_dataset.csv")
+
+# merge steam data
+steam_meta = steam_games.merge(
+    steam_history, left_on="appid", right_on="App_ID", how="left"
+).merge(
+    master_games, left_on="appid", right_on="App_ID", how="left"
+)
+
+# Rebuild year
+steam_meta["Release_Date"] = steam_meta["Release_Date_x"].fillna(
+    steam_meta["Release_Date_y"]
+)
+
+steam_meta["Year"] = pd.to_datetime(
+    steam_meta["Release_Date"], errors="coerce"
+).dt.year
+
+# Build owners_mid and review_ratio
+def owners_to_midpoint(x):
+    if isinstance(x, str) and "-" in x:
+        low, high = x.split("-")
+        return (int(low) + int(high)) / 2
+    return None
+
+steam_meta["owners_mid"] = steam_meta["owners"].apply(owners_to_midpoint)
+
+steam_meta["total_reviews"] = steam_meta["positive"] + steam_meta["negative"]
+steam_meta["review_ratio"] = steam_meta["positive"] / steam_meta["total_reviews"]
+
+# Create shared columns
+steam_meta["Platform"] = "PC"
+
+steam_meta["Genre"] = steam_meta["Main_Genre_x"].fillna(
+    steam_meta["Main_Genre_y"]
+).fillna("Unknown")
+
+steam_meta["Publisher_Final"] = steam_meta["publisher"].fillna(
+    steam_meta["Developer_x"]
+).fillna(
+    steam_meta["Developer_y"]
+).fillna("Unknown")
+
+# create features
+steam_features = steam_meta[[
+    "Platform",
+    "Genre",
+    "Publisher_Final",
+    "Year"
+]].rename(columns={"Publisher_Final": "Publisher"})
+
+# fix Nan values
+steam_features["Genre"] = steam_features["Genre"].fillna("Unknown")
+steam_features["Publisher"] = steam_features["Publisher"].fillna("Unknown")
+steam_features["Platform"] = steam_features["Platform"].fillna("PC")
+steam_features["Year"] = steam_features["Year"].fillna(steam_features["Year"].median())
+
+# Import libraries
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+# Set up the sets
+X = vg_sales[["Platform", "Genre", "Publisher", "Year"]]
+y = vg_sales["Global_Sales_Log"]
+
+numeric = ["Year"]
+categorical = ["Platform", "Genre", "Publisher"]
+
+preprocess = ColumnTransformer([
+    ("num", "passthrough", numeric),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), categorical)
+])
+
+# craft the model
+model = Pipeline([
+    ("prep", preprocess),
+    ("rf", RandomForestRegressor(random_state=42))
+])
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# fit the model
+model.fit(X_train, y_train)
+preds = model.predict(X_test)
+
+# calculate the MSE
+mse = mean_squared_error(y_test, preds)
+print("MSE:", mse)
+
+# create prediction model
+steam_pred_log = model.predict(steam_features)
+
+# Make predictions
+steam_meta["Predicted_Global_Sales"] = np.expm1(steam_pred_log)
+
+# Import Libraries
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 
+plt.figure(figsize=(12,6))
+sns.boxplot(data=vg_sales, x="Genre", y="Global_Sales")
+plt.xticks(rotation=90)
+plt.title("Global Sales Distribution by Genre")
+plt.tight_layout()
+plt.show()
+
+# Plot
+plt.figure(figsize=(10,6))
+sns.scatterplot(data=vg_sales, x="Year", y="Global_Sales")
+plt.title("Global Sales by Release Year")
+plt.tight_layout()
+plt.show()
+
+# Plot
+plt.figure(figsize=(10,6))
+vg_sales["Platform"].value_counts().plot(kind="bar")
+plt.title("Platform Distribution in Historical Sales Data")
+plt.xlabel("Platform")
+plt.ylabel("Count")
+plt.tight_layout()
+plt.show()
+
+# Import Libraries
+import numpy as np
+
+# Extract feature names after one-hot encoding
+ohe = model.named_steps["prep"].named_transformers_["cat"]
+cat_features = ohe.get_feature_names_out(["Platform", "Genre", "Publisher"])
+all_features = np.concatenate([["Year"], cat_features])
+
+# Extract importances
+importances = model.named_steps["rf"].feature_importances_
+
+# Plot top 20 for readability
+idx = np.argsort(importances)[-20:]
+plt.figure(figsize=(10,8))
+plt.barh(all_features[idx], importances[idx])
+plt.title("Top 20 Feature Importances (RandomForest)")
+plt.tight_layout()
+plt.show()
+
+# Plot
+plt.figure(figsize=(8,6))
+sns.scatterplot(x=y_test, y=preds)
+plt.xlabel("Actual Log(Global Sales)")
+plt.ylabel("Predicted Log(Global Sales)")
+plt.title("Actual vs Predicted Sales (Test Set)")
+plt.tight_layout()
+plt.show()
+
+steam_unique = steam_meta.drop_duplicates(subset="appid")
+steam_unique[["name", "Predicted_Global_Sales"]].head(20)
+
+steam_unique.sort_values(
+    by="Predicted_Global_Sales", ascending=False
+)[["name", "Predicted_Global_Sales"]].head(20)
+
+steam_unique["Predicted_Global_Sales"].describe()
+
+# plot it out
+sns.histplot(steam_unique["Predicted_Global_Sales"], bins=50)
+plt.title("Distribution of Predicted Global Sales (Unique Steam Titles)")
+plt.show()
