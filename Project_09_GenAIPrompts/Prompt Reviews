@@ -1,0 +1,40 @@
+# Import library
+import pdfplumber
+
+# Read the invoice
+invoice_path = "C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 670 - Advanced Uses of Generative AI/Week 2/dsc-670-exercise-invoice.pdf"
+
+# Extract the text
+with pdfplumber.open(invoice_path) as pdf:
+    extracted_text = "\n".join(page.extract_text() for page in pdf.pages)
+
+# ensure it read
+print(extracted_text)
+
+# Import library
+from transformers import AutoTokenizer, AutoModelForTokenClassification
+import torch
+
+# Load BERT from local area
+tokenizer = AutoTokenizer.from_pretrained("dslim/bert-base-NER")
+model = AutoModelForTokenClassification.from_pretrained("dslim/bert-base-NER")
+
+# Run BERT (Ernie is missing)
+inputs = tokenizer(extracted_text, return_tensors="pt", truncation=True)
+outputs = model(**inputs)
+preds = torch.argmax(outputs.logits, dim=2)
+tokens = inputs.tokens()
+labels = [model.config.id2label[p.item()] for p in preds[0]]
+
+# Import library
+import json
+
+# Convert to JSON
+entities = []
+for token, label in zip(tokens, labels):
+    if label != "O":
+        entities.append({"token": token, "label": label})
+
+json_output = json.dumps({"entities": entities}, indent=4)
+print(json_output);
+
