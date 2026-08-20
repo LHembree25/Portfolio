@@ -34,14 +34,14 @@ Demonstrates applied neural network construction, model accuracy measurement, an
 Project folder: [Convolutional Neural Network (CNN)](https://github.com/LHembree25/Portfolio/tree/main/Project_03_Build a Convolutional Neural Network (CNN))
 
 
-## Book Recommendation Engine
-Collaborative-filtering recommender using Book-Crossing or Goodreads datasets.
+## Childcare Affordability and Maternal Labor Force Participation Analysis
+Analysis of childcare costs, household income, and maternal labor‑force participation using the National Database of Childcare Prices.
 
-Includes similarity scoring, recommendation logic, and evaluation.
+Includes data cleaning, affordability ratio construction, correlation analysis, and multiple visualization builds (scatterplots, bar charts, bands, slopes, and tile grids).
 
-Demonstrates algorithmic reasoning.
+Demonstrates technician‑level preprocessing, structured analysis, and multi‑visual data presentation.
 
-Project folder: [Book Recommender](https://github.com/LHembree25/Portfolio/tree/main/Project_10_BookRecommendation)
+Project folder: [ChildcareAffordabilityAnalysis](https://github.com/LHembree25/Portfolio/tree/main/Project_10_ChildcareAffordabilityAnalysis)
 
 
 ## Visualizing Aggregated Data
