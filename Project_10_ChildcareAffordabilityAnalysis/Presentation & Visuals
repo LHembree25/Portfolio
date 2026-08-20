@@ -1,0 +1,327 @@
+# import libraries
+import pandas as pd
+import numpy as np
+
+# read in the data
+ndc_prices_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 640 - Data Presentation and Visualization/Week 1&2/nationaldatabaseofchildcareprices.csv")
+
+# Preview 
+ndc_prices_df.head()
+
+# 2nd Preview look
+ndc_prices_df.info()
+
+# columns to keep
+keep_cols = [
+    "State_Name", "State_Abbreviation", "County_Name", "County_FIPS_Code", "StudyYear",
+
+    # childcare cost fields
+    "MCInfant", "MCToddler", "MCPreschool",
+    "MFCCInfant", "MFCCToddler", "MFCCPreschool",
+
+    # income
+    "MHI",
+
+    # labor force participation
+    "FLFPR_20to64",
+    "FLFPR_20to64_Under6",
+
+    # household structure (for filtering stability)
+    "H_Under6_BothWork",
+    "H_Under6_FWork",
+    "H_Under6_MWork",
+    "H_Under6_SingleM"
+]
+
+# update df
+ndc_prices_df = ndc_prices_df[keep_cols]
+
+# import library
+import re
+
+# start cleaning
+def clean_money(col):
+    return (
+        col.astype(str)
+           .str.replace(r"[^0-9.\-]", "", regex=True)
+           .replace("", np.nan)
+           .astype(float)
+    )
+
+# identify columns
+money_cols = [
+    "MCInfant", "MCToddler", "MCPreschool",
+    "MFCCInfant", "MFCCToddler", "MFCCPreschool",
+    "MHI"
+]
+
+# convert
+for col in money_cols:
+    ndc_prices_df[col] = clean_money(ndc_prices_df[col])
+
+# confirm type
+ndc_prices_df.dtypes
+
+# identify columns
+household_cols = [
+    "H_Under6_BothWork",
+    "H_Under6_FWork",
+    "H_Under6_MWork",
+    "H_Under6_SingleM"
+]
+
+# convert
+for col in household_cols:
+    ndc_prices_df[col] = pd.to_numeric(ndc_prices_df[col], errors="coerce")
+
+# filter unstable data columns out
+ndc_prices_df["Under6_Total"] = (
+    ndc_prices_df["H_Under6_BothWork"] +
+    ndc_prices_df["H_Under6_FWork"] +
+    ndc_prices_df["H_Under6_MWork"] +
+    ndc_prices_df["H_Under6_SingleM"]
+)
+
+# sort & preview
+ndc_prices_df[["State_Name","County_Name","FLFPR_20to64_Under6"]].sort_values("FLFPR_20to64_Under6").head(20)
+
+# actual filter
+ndc_prices_df = ndc_prices_df[ndc_prices_df["Under6_Total"] >= 20]
+
+# Compute the affordability ratios
+ndc_prices_df["InfantCost_to_Income"] = ndc_prices_df["MCInfant"] / ndc_prices_df["MHI"]
+ndc_prices_df["ToddlerCost_to_Income"] = ndc_prices_df["MCToddler"] / ndc_prices_df["MHI"]
+ndc_prices_df["PreschoolCost_to_Income"] = ndc_prices_df["MCPreschool"] / ndc_prices_df["MHI"]
+
+# Compute center‑based vs FCC differences
+ndc_prices_df["Infant_Center_vs_FCC"] = ndc_prices_df["MCInfant"] - ndc_prices_df["MFCCInfant"]
+ndc_prices_df["Toddler_Center_vs_FCC"] = ndc_prices_df["MCToddler"] - ndc_prices_df["MFCCToddler"]
+ndc_prices_df["Preschool_Center_vs_FCC"] = ndc_prices_df["MCPreschool"] - ndc_prices_df["MFCCPreschool"]
+
+# build the correlation matrix
+num_cols = ndc_prices_df.select_dtypes(include='number').columns
+corr = ndc_prices_df[num_cols].corr()
+
+# maternal‑labor‑force participation correlations
+corr["FLFPR_20to64_Under6"].sort_values(ascending=False)
+
+# Identify the counties with the highest affordability burden
+ndc_prices_df[["State_Name","County_Name","InfantCost_to_Income"]].sort_values("InfantCost_to_Income", ascending=False).head(20)
+
+# Identify counties with the lowest maternal labor‑force participation
+ndc_prices_df[["State_Name","County_Name","FLFPR_20to64_Under6"]].sort_values("FLFPR_20to64_Under6").head(20)
+
+ndc_prices_df.loc[
+    ndc_prices_df["County_Name"].isin([
+        "Menard County", "Esmeralda County", "Kinney County", "Hayes County",
+        "Kenedy County", "De Baca County", "Terrell County", "King County",
+        "McMullen County"
+    ]),
+    ["State_Name", "County_Name", "Under6_Total"]
+]
+
+# import library
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# plot
+plt.figure(figsize=(10,6))
+sns.scatterplot(
+    data=ndc_prices_df,
+    x="InfantCost_to_Income",
+    y="FLFPR_20to64_Under6",
+    alpha=0.6
+)
+plt.xlabel("Infant Cost as Share of Household Income")
+plt.ylabel("Maternal Labor Force Participation (Under 6)")
+plt.title("Childcare Affordability and Maternal Labor Force Participation")
+plt.tight_layout()
+plt.show()
+
+# sort
+top_afford = ndc_prices_df.sort_values("InfantCost_to_Income", ascending=False).head(20)
+
+# plot
+plt.figure(figsize=(10,6))
+sns.barplot(
+    data=top_afford,
+    x="InfantCost_to_Income",
+    y="County_Name",
+    orient="h"
+)
+plt.xlabel("Infant Cost as Share of Household Income")
+plt.ylabel("County")
+plt.title("Counties with Highest Childcare Affordability Burden")
+plt.tight_layout()
+plt.show()
+
+# plot 
+plt.figure(figsize=(10,6))
+sns.histplot(
+    data=ndc_prices_df,
+    x="FLFPR_20to64_Under6",
+    bins=30,
+    kde=True
+)
+plt.xlabel("Maternal Labor Force Participation (Under 6)")
+plt.title("Distribution of Maternal Labor Force Participation Across Counties")
+plt.tight_layout()
+plt.show()
+
+# copy & split
+df = ndc_prices_df.copy()
+df["bin"] = pd.qcut(df["InfantCost_to_Income"], 6)
+
+# bin em
+bin_means = df.groupby("bin").agg({
+    "InfantCost_to_Income": "mean",
+    "FLFPR_20to64_Under6": "mean"
+}).reset_index()
+
+# regression on bin means
+coef = np.polyfit(bin_means["InfantCost_to_Income"], bin_means["FLFPR_20to64_Under6"], 1)
+line_x = np.array([bin_means["InfantCost_to_Income"].min(), bin_means["InfantCost_to_Income"].max()])
+line_y = coef[0] * line_x + coef[1]
+
+# plot
+plt.figure(figsize=(8,6))
+plt.plot(line_x, line_y, color="black", linewidth=2)
+plt.scatter(bin_means["InfantCost_to_Income"], bin_means["FLFPR_20to64_Under6"], s=120, color="steelblue")
+plt.title("Binned Regression: Cost-to-Income vs Maternal Participation")
+plt.xlabel("Infant Cost as Share of Household Income")
+plt.ylabel("Maternal Labor Force Participation (Under 6)")
+plt.show()
+
+# sort
+ranking = (
+    ndc_prices_df
+    .sort_values("InfantCost_to_Income", ascending=False)
+    .head(15)
+)
+
+# plot
+plt.figure(figsize=(8,6))
+plt.barh(
+    ranking["County_Name"],
+    ranking["InfantCost_to_Income"],
+    color="steelblue"
+)
+plt.title("Counties with Highest Childcare Affordability Burden")
+plt.xlabel("Infant Cost as Share of Household Income")
+plt.ylabel("County")
+plt.gca().invert_yaxis()
+plt.tight_layout()
+plt.show()
+
+# plot
+plt.figure(figsize=(8,6))
+sns.violinplot(
+    data=ndc_prices_df,
+    y="FLFPR_20to64_Under6",
+    color="lightgray"
+)
+plt.title("Distribution of Maternal Labor Force Participation")
+plt.ylabel("Maternal Labor Force Participation (Under 6)")
+plt.tight_layout()
+plt.show()
+
+# prep the patient doctor
+values = ndc_prices_df["FLFPR_20to64_Under6"].dropna()
+bins = [0, 20, 40, 60, 80, 100]
+counts, _ = np.histogram(values, bins=bins)
+
+#label
+labels = ["0–20", "20–40", "40–60", "60–80", "80–100"]
+
+# size & name
+plt.figure(figsize=(12, 6))
+plt.title("Maternal Participation Bands Across Counties", fontsize=16, pad=20)
+
+# simple, flat infographic colors
+colors = ["#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3"]
+
+# plot
+plt.bar(labels, counts, color=colors, edgecolor="white", linewidth=2)
+plt.ylabel("Number of Counties", fontsize=12)
+plt.xlabel("Maternal Participation Band (%)", fontsize=12)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+plt.show()
+
+# drop na's
+df = ndc_prices_df.dropna(subset=["InfantCost_to_Income", "FLFPR_20to64_Under6"]).copy()
+
+# Split in two 
+df["cost_group"] = pd.qcut(df["InfantCost_to_Income"], 2, labels=["Low Cost", "High Cost"])
+
+# group
+group_means = df.groupby("cost_group")["FLFPR_20to64_Under6"].mean().reset_index()
+
+# Plot
+plt.figure(figsize=(6,4))
+plt.plot(group_means["cost_group"], group_means["FLFPR_20to64_Under6"], marker="o")
+plt.title("Maternal Participation by Childcare Cost Group")
+plt.ylabel("Average Participation (Under 6)")
+plt.xlabel("Childcare Cost Group")
+plt.tight_layout()
+plt.show()
+
+# take the top 20 counties by affordability burden
+top = (
+    ndc_prices_df
+    .sort_values("InfantCost_to_Income", ascending=False)
+    .head(20)
+    .copy()
+)
+
+# assign counties to 5 arbitrary groups for color variety
+top["color_group"] = pd.qcut(top["InfantCost_to_Income"], 5, labels=False)
+
+# flat, non‑gradient infographic colors
+palette = [
+    "#8dd3c7",  # teal
+    "#ffffb3",  # soft yellow
+    "#bebada",  # lavender
+    "#fb8072",  # coral
+    "#80b1d3"   # blue
+]
+
+top["color"] = top["color_group"].map(lambda x: palette[int(x)])
+
+labels = top["County_Name"].values
+colors = top["color"].values
+
+grid_size = int(np.ceil(np.sqrt(len(labels))))
+
+fig, ax = plt.subplots(figsize=(8, 8))
+
+for i, (label, color) in enumerate(zip(labels, colors)):
+    row = i // grid_size
+    col = i % grid_size
+
+    # draw flat tile
+    rect = plt.Rectangle(
+        (col, row), 1, 1,
+        facecolor=color,
+        edgecolor="white",
+        linewidth=2
+    )
+    ax.add_patch(rect)
+
+    # centered county name
+    ax.text(
+        col + 0.5, row + 0.5,
+        label,
+        ha="center", va="center",
+        fontsize=8, color="black"
+    )
+
+ax.set_xlim(0, grid_size)
+ax.set_ylim(0, grid_size)
+ax.set_xticks([])
+ax.set_yticks([])
+ax.set_title("Counties with Highest Affordability Burden")
+
+plt.gca().invert_yaxis()
+plt.tight_layout()
+plt.show()
