@@ -41,7 +41,7 @@ Includes data cleaning, affordability ratio construction, correlation analysis, 
 
 Demonstrates technician‑level preprocessing, structured analysis, and multi‑visual data presentation.
 
-Project folder: [ChildcareAffordabilityAnalysis](https://github.com/LHembree25/Portfolio/tree/main/Project_10_ChildcareAffordabilityAnalysis)
+Project folder: [Childcare Affordability Analysis](https://github.com/LHembree25/Portfolio/tree/main/Project_10_ChildcareAffordabilityAnalysis)
 
 
 ## Visualizing Aggregated Data
