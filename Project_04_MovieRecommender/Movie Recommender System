@@ -1,0 +1,94 @@
+# import libraries
+import numpy as np
+import pandas as pd
+
+# import file as pandas data frame
+links_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 630 - Predictive Analytics/Week 10/links.csv")
+movies_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 630 - Predictive Analytics/Week 10/movies.csv")
+ratings_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 630 - Predictive Analytics/Week 10/ratings.csv")
+tags_df = pd.read_csv("C:/Users/Ashem/OneDrive/Desktop/Masters Program - DSC/DSC 630 - Predictive Analytics/Week 10/tags.csv")
+
+# Preview
+links_df.head()
+
+# Preview
+movies_df.head()
+
+# Preview
+ratings_df.head()
+
+# Preview
+tags_df.head()
+
+# merge tags with movie titles
+movies_tags = tags_df.merge(movies_df, on='movieId')
+
+# collapse all tags for each movie into one string
+movie_tag_text = movies_tags.groupby(['movieId', 'title'])['tag'].apply(
+    lambda x: " ".join(x.astype(str))
+).reset_index()
+
+# import library
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# build TF-IDF matrix for tag text
+tfidf = TfidfVectorizer(stop_words='english')
+tag_matrix = tfidf.fit_transform(movie_tag_text['tag'])
+
+# import library
+from sklearn.metrics.pairwise import cosine_similarity
+
+# compute tag-based similarity
+tag_similarity = cosine_similarity(tag_matrix)
+tag_similarity_df = pd.DataFrame(
+    tag_similarity,
+    index=movie_tag_text['title'],
+    columns=movie_tag_text['title']
+)
+
+# build user–movie rating matrix
+ratings_merged = ratings_df.merge(movies_df, on='movieId')
+user_movie_matrix = ratings_merged.pivot_table(
+    index='userId',
+    columns='title',
+    values='rating'
+).fillna(0)
+
+# compute rating-based similarity
+rating_similarity = cosine_similarity(user_movie_matrix.T)
+rating_similarity_df = pd.DataFrame(
+    rating_similarity,
+    index=user_movie_matrix.columns,
+    columns=user_movie_matrix.columns
+)
+
+# align the two similarity matrices so they share the same movie index
+common_movies = tag_similarity_df.index.intersection(rating_similarity_df.index)
+tag_sim = tag_similarity_df.loc[common_movies, common_movies]
+rating_sim = rating_similarity_df.loc[common_movies, common_movies]
+
+# normalize both similarity matrices to the same scale
+tag_norm = (tag_sim - tag_sim.min().min()) / (tag_sim.max().max() - tag_sim.min().min())
+rating_norm = (rating_sim - rating_sim.min().min()) / (rating_sim.max().max() - rating_sim.min().min())
+
+# blend the two similarity signals (50/50 weight, can be adjusted)
+hybrid_similarity = 0.5 * tag_norm + 0.5 * rating_norm
+
+# recommender function using the hybrid similarity
+def recommend_hybrid(movie_title, num_recs=10):
+    if movie_title not in hybrid_similarity.columns:
+        print(f"'{movie_title}' not found in the dataset.")
+        return
+
+    similarity_scores = hybrid_similarity[movie_title]
+    similar_movies = similarity_scores.sort_values(ascending=False)
+    recommendations = similar_movies.iloc[1:num_recs+1]
+
+    df = recommendations.reset_index()
+    df.columns = ['title', 'similarity']
+    df['similarity'] = df['similarity'].round(3)
+
+    print(df.to_string(index=False))
+
+# example
+recommend_hybrid("Toy Story (1995)")
