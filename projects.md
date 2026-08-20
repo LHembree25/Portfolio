@@ -24,14 +24,14 @@ Demonstrates applied machine learning.
 Project folder: [Predictive Analytics](https://github.com/LHembree25/Portfolio/tree/main/Project_02_PredictiveAnalytics)
 
 
-## Housing Affordability Forecasting
-Time-series forecasting using Zillow, Redfin, FRED, and Census data.
+## MNIST Convolutional Neural Network Classifier
+Image classification using the MNIST handwritten digit dataset.
 
-Includes data ingestion, affordability index construction, and forecasting.
+Includes data loading, preprocessing, CNN architecture definition, training, and evaluation.
 
-Demonstrates statistical modeling and economic analysis.
+Demonstrates applied neural network construction, model accuracy measurement, and confusion matrix analysis.
 
-Project folder: [Forecasting Model](https://github.com/LHembree25/Portfolio/tree/main/Project_03_ForecastingModel)
+Project folder: [Convolutional Neural Network (CNN)](https://github.com/LHembree25/Portfolio/tree/main/Project_03_Build a Convolutional Neural Network (CNN))
 
 
 ## Book Recommendation Engine
